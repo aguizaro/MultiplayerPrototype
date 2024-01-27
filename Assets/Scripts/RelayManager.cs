@@ -10,6 +10,7 @@ using Unity.Services.Core;
 using Unity.Services.Relay;
 using Unity.Services.Relay.Models;
 using UnityEngine;
+
 // ReSharper disable SuggestVarOrType_SimpleTypes
 // ReSharper disable SuggestVarOrType_BuiltInTypes
 
@@ -18,6 +19,8 @@ public class RelayManager : MonoBehaviour
     [SerializeField] private GameObject _buttons;
     [SerializeField] private TMP_Text _joinCodeText;
     [SerializeField] private TMP_InputField _joinInput;
+    [SerializeField] private GameObject _gameMap;
+    [SerializeField] private Transform mainCameraTransform;
 
 
     private NetworkManager _netManager;
@@ -32,6 +35,7 @@ public class RelayManager : MonoBehaviour
 
         if (_netManager == null)
         {
+            Debug.Log("Setting _netManager");
             _netManager.SetSingleton();
             if (_netManager == null)
             {
@@ -59,14 +63,10 @@ public class RelayManager : MonoBehaviour
     {
         await UnityServices.InitializeAsync();
         await AuthenticationService.Instance.SignInAnonymouslyAsync();
-
-        Debug.Log("Auth Successfull");
     }
 
     public async void CreateGame()
     {
-        Debug.Log("Creating Game");
-
         _buttons.SetActive(false);
 
         Allocation a = await RelayService.Instance.CreateAllocationAsync(MaxPlayers);
@@ -76,36 +76,42 @@ public class RelayManager : MonoBehaviour
 
         _transport.SetHostRelayData(a.RelayServer.IpV4, (ushort)a.RelayServer.Port, a.AllocationIdBytes, a.Key, a.ConnectionData);
 
-        Debug.Log("Starting Host: ");
-
+        Instantiate(_gameMap);
+        SetCameraTransform(new Vector3(0f, 13.62f, 0), new Vector3(90f,0,0), Vector3.one);
         _netManager.StartHost();
-
-        Debug.Log("Is Host: " + _netManager.IsHost);
-        Debug.Log("Is Server: " + _netManager.IsServer);
-        Debug.Log("Is Active: " + _netManager.isActiveAndEnabled);
     }
 
     public async void JoinGame()
     {
+        if (_joinInput.text.Length <= 0)
+        {
+            _joinCodeText.text = "Code Not Entered";
+            return;
+        }
+
         _buttons.SetActive(false);
-
-        Debug.Log(RelayService.Instance.ToString());
-
-        Debug.Log("Joining");
-        Debug.Log(_joinInput);
 
         JoinAllocation a = await RelayService.Instance.JoinAllocationAsync(_joinInput.text);
 
-        Debug.Log("Setting Client Relay Data");
+        if (a == null)
+        {
+            _joinCodeText.text = "Code Not Valid";
+            return;
+        }
+
+        _joinCodeText.text = _joinInput.text;
 
         _transport.SetClientRelayData(a.RelayServer.IpV4, (ushort)a.RelayServer.Port, a.AllocationIdBytes, a.Key, a.ConnectionData, a.HostConnectionData);
 
-        Debug.Log("Starting client");
-
+        Instantiate(_gameMap);
+        SetCameraTransform(new Vector3(0f, 13.62f, 0), new Vector3(90f, 0, 0), Vector3.one);
         _netManager.StartClient();
+    }
 
-        Debug.Log("Is Client: " + _netManager.IsClient);
-        Debug.Log("Is connected client: " + _netManager.IsConnectedClient);
-        Debug.Log("Is active: " + _netManager.isActiveAndEnabled);
+    public void SetCameraTransform(Vector3 position, Vector3 rotationEulerAngles, Vector3 scale)
+    {
+        mainCameraTransform.position = position;
+        mainCameraTransform.rotation = Quaternion.Euler(rotationEulerAngles);
+        mainCameraTransform.localScale = scale;
     }
 }

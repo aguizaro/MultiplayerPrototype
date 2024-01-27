@@ -398,6 +398,9 @@ MonoBehaviour:
   _buttons: {fileID: 1227983843}
   _joinCodeText: {fileID: 935077318}
   _joinInput: {fileID: 4300147152962470403}
+  _gameMap: {fileID: 2780310255825081297, guid: f5b13667ad79b45c38e7160a48f178fa,
+    type: 3}
+  mainCameraTransform: {fileID: 1963442867}
 --- !u!114 &1871200792
 MonoBehaviour:
   m_ObjectHideFlags: 0
