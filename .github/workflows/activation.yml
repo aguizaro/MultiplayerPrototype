@@ -11,5 +11,5 @@ jobs:
         env:
           UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
         with:
-          projectPath: ${GITHUB_WORKSPACE}
+          projectPath: ${{ github.workspace }}
           githubToken: ${{ secrets.GITHUB_TOKEN }}
