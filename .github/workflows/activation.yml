@@ -1,0 +1,15 @@
+name: Get Unity License Activation File
+
+on: workflow_dispatch
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+        with:
+          projectPath: path/to/your/project
+          githubToken: ${{ secrets.GITHUB_TOKEN }}

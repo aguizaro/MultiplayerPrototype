@@ -73,3 +73,7 @@ crashlytics-build.properties
 
 #Mac
 .DS_Store
+
+# Ignore temporaries from GameCI
+/[Aa]rtifacts/
+/[Cc]odeCoverage/
