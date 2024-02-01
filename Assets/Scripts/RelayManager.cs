@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using TMPro;
 using Unity.Netcode;
 using Unity.Netcode.Transports.UTP;
+using Unity.Networking.Transport.Relay;
 using Unity.Services.Authentication;
 using Unity.Services.Core;
 using Unity.Services.Relay;
@@ -22,36 +23,10 @@ public class RelayManager : MonoBehaviour
     [SerializeField] private GameObject _gameMap;
     [SerializeField] private Transform mainCameraTransform;
 
-
-    private NetworkManager _netManager;
-
-    private UnityTransport _transport;
     private const int MaxPlayers = 5;
 
     private async void Awake()
     {
-        _netManager = FindFirstObjectByType<NetworkManager>();
-        _transport = FindFirstObjectByType<UnityTransport>();
-
-        if (_netManager == null)
-        {
-            Debug.Log("Setting _netManager");
-            _netManager.SetSingleton();
-            if (_netManager == null)
-            {
-                Debug.Log("Still null: ", _netManager);
-                return;
-            }
-
-            DontDestroyOnLoad(gameObject);
-        }
-        else
-        {
-            Debug.Log(_netManager);
-        }
-
-
-
         _buttons.SetActive(false);
 
         await Authenticate();
@@ -72,13 +47,15 @@ public class RelayManager : MonoBehaviour
         Allocation a = await RelayService.Instance.CreateAllocationAsync(MaxPlayers);
         _joinCodeText.text = await RelayService.Instance.GetJoinCodeAsync(a.AllocationId);
 
-        Debug.Log("Join code: " + _joinCodeText.text);
+        // configure unity tranport to use websockets for webGL support
+        NetworkManager.Singleton.GetComponent<UnityTransport>().SetRelayServerData(new RelayServerData(a, "wss"));
 
-        _transport.SetHostRelayData(a.RelayServer.IpV4, (ushort)a.RelayServer.Port, a.AllocationIdBytes, a.Key, a.ConnectionData);
+        Debug.Log("Join code: " + _joinCodeText.text);
 
         Instantiate(_gameMap);
         SetCameraTransform(new Vector3(0f, 13.62f, 0), new Vector3(90f,0,0), Vector3.one);
-        _netManager.StartHost();
+
+        NetworkManager.Singleton.StartHost();
     }
 
     public async void JoinGame()
@@ -93,6 +70,9 @@ public class RelayManager : MonoBehaviour
 
         JoinAllocation a = await RelayService.Instance.JoinAllocationAsync(_joinInput.text);
 
+        // configure unity tranport to use websockets for webGL support
+        NetworkManager.Singleton.GetComponent<UnityTransport>().SetRelayServerData(new RelayServerData(a, "wss"));
+
         if (a == null)
         {
             _joinCodeText.text = "Code Not Valid";
@@ -101,11 +81,10 @@ public class RelayManager : MonoBehaviour
 
         _joinCodeText.text = _joinInput.text;
 
-        _transport.SetClientRelayData(a.RelayServer.IpV4, (ushort)a.RelayServer.Port, a.AllocationIdBytes, a.Key, a.ConnectionData, a.HostConnectionData);
-
         Instantiate(_gameMap);
         SetCameraTransform(new Vector3(0f, 13.62f, 0), new Vector3(90f, 0, 0), Vector3.one);
-        _netManager.StartClient();
+
+        NetworkManager.Singleton.StartHost();
     }
 
     public void SetCameraTransform(Vector3 position, Vector3 rotationEulerAngles, Vector3 scale)

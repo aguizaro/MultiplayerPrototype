@@ -13,6 +13,7 @@ using Unity.Services.Lobbies.Models;
 using Unity.Services.Relay;
 using Unity.Services.Relay.Models;
 using UnityEngine;
+using Unity.Networking.Transport.Relay;
 
 #if UNITY_EDITOR
 using ParrelSync;
@@ -26,11 +27,8 @@ public class SimpleMatchmaking : MonoBehaviour
 
     private Lobby _connectedLobby;
     private QueryResponse _lobbies;
-    private UnityTransport _transport;
     private const string JoinCodeKey = "j";
     private string _playerId;
-
-    private void Awake() => _transport = FindFirstObjectByType<UnityTransport>();
 
     public async void CreateOrJoinLobby()
     {
@@ -66,7 +64,7 @@ public class SimpleMatchmaking : MonoBehaviour
 
         await UnityServices.InitializeAsync(options);
 
-        await AuthenticationService.Instance.SignInAnonymouslyAsync();
+        if (!AuthenticationService.Instance.IsSignedIn) await AuthenticationService.Instance.SignInAnonymouslyAsync();
         _playerId = AuthenticationService.Instance.PlayerId;
     }
 
@@ -82,8 +80,8 @@ public class SimpleMatchmaking : MonoBehaviour
             // If we found one, grab the relay allocation details
             var a = await RelayService.Instance.JoinAllocationAsync(lobby.Data[JoinCodeKey].Value);
 
-            // Set the details to the transform
-            SetTransformAsClient(a);
+            // configure unity tranport to use websockets for webGL support
+            NetworkManager.Singleton.GetComponent<UnityTransport>().SetRelayServerData(new RelayServerData(a, "wss"));
 
             Debug.Log("Starting Client");
 
@@ -109,7 +107,12 @@ public class SimpleMatchmaking : MonoBehaviour
 
             // Create a relay allocation and generate a join code to share with the lobby
             var a = await RelayService.Instance.CreateAllocationAsync(maxPlayers);
+
+            // configure unity tranport to use websockets for webGL support
+            NetworkManager.Singleton.GetComponent<UnityTransport>().SetRelayServerData(new RelayServerData(a, "wss"));
+
             var joinCode = await RelayService.Instance.GetJoinCodeAsync(a.AllocationId);
+
 
             Debug.Log("Created Join Code: " + joinCode);
 
@@ -127,17 +130,12 @@ public class SimpleMatchmaking : MonoBehaviour
 
             Debug.Log("Started heartbeat routine");
 
-            if (_transport == null){
-                Debug.Log("_transport is null");
+            if (NetworkManager.Singleton.GetComponent<UnityTransport>() == null){
+                Debug.Log("unity transport is null");
                 return null;
             }
 
-            // Set the game room to use the relay allocation
-            _transport.SetHostRelayData(a.RelayServer.IpV4, (ushort)a.RelayServer.Port, a.AllocationIdBytes, a.Key, a.ConnectionData);
-
             Debug.Log("Starting Host");
-
-            Debug.Log(NetworkManager.Singleton.ToString());
 
             // Initialize Game
             StartGame();
@@ -154,11 +152,6 @@ public class SimpleMatchmaking : MonoBehaviour
             Debug.LogFormat("Failed creating a lobby");
             return null;
         }
-    }
-
-    private void SetTransformAsClient(JoinAllocation a)
-    {
-        _transport.SetClientRelayData(a.RelayServer.IpV4, (ushort)a.RelayServer.Port, a.AllocationIdBytes, a.Key, a.ConnectionData, a.HostConnectionData);
     }
 
     private static IEnumerator HeartbeatLobbyCoroutine(string lobbyId, float waitTimeSeconds)
