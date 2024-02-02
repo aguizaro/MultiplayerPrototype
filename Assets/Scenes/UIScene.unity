@@ -354,6 +354,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _buttons: {fileID: 1227983843}
+  _inputField: {fileID: 4300147152962470403}
+  _codeText: {fileID: 935077318}
   _gameMap: {fileID: 2780310255825081297, guid: f5b13667ad79b45c38e7160a48f178fa,
     type: 3}
   mainCameraTransform: {fileID: 1963442867}
@@ -457,7 +459,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &1871200789
 Transform:
   m_ObjectHideFlags: 0
@@ -707,7 +709,17 @@ PrefabInstance:
         type: 3}
       propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_Target
       value: 
-      objectReference: {fileID: 1871200791}
+      objectReference: {fileID: 1606576228}
+    - target: {fileID: 352209366523184033, guid: 016e8184f31654bada28e9c23b9a8b07,
+        type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_MethodName
+      value: JoinButtonPressed
+      objectReference: {fileID: 0}
+    - target: {fileID: 352209366523184033, guid: 016e8184f31654bada28e9c23b9a8b07,
+        type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_TargetAssemblyTypeName
+      value: SimpleMatchmaking, Assembly-CSharp
+      objectReference: {fileID: 0}
     - target: {fileID: 2557332171678219687, guid: 016e8184f31654bada28e9c23b9a8b07,
         type: 3}
       propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_Target
@@ -716,7 +728,7 @@ PrefabInstance:
     - target: {fileID: 2557332171678219687, guid: 016e8184f31654bada28e9c23b9a8b07,
         type: 3}
       propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_MethodName
-      value: CreateOrJoinLobby
+      value: PlayButtonPressed
       objectReference: {fileID: 0}
     - target: {fileID: 2557332171678219687, guid: 016e8184f31654bada28e9c23b9a8b07,
         type: 3}
@@ -732,7 +744,17 @@ PrefabInstance:
         type: 3}
       propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_Target
       value: 
-      objectReference: {fileID: 1871200791}
+      objectReference: {fileID: 1606576228}
+    - target: {fileID: 7166388821660307393, guid: 016e8184f31654bada28e9c23b9a8b07,
+        type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_MethodName
+      value: CreateButtonPressed
+      objectReference: {fileID: 0}
+    - target: {fileID: 7166388821660307393, guid: 016e8184f31654bada28e9c23b9a8b07,
+        type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_TargetAssemblyTypeName
+      value: SimpleMatchmaking, Assembly-CSharp
+      objectReference: {fileID: 0}
     - target: {fileID: 7726233538996562752, guid: 016e8184f31654bada28e9c23b9a8b07,
         type: 3}
       propertyPath: m_Pivot.x
