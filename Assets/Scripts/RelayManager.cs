@@ -49,6 +49,7 @@ public class RelayManager : MonoBehaviour
 
         // configure unity tranport to use websockets for webGL support
         NetworkManager.Singleton.GetComponent<UnityTransport>().SetRelayServerData(new RelayServerData(a, "wss"));
+        NetworkManager.Singleton.GetComponent<UnityTransport>().UseWebSockets = true;
 
         Debug.Log("Join code: " + _joinCodeText.text);
 
@@ -72,10 +73,12 @@ public class RelayManager : MonoBehaviour
 
         // configure unity tranport to use websockets for webGL support
         NetworkManager.Singleton.GetComponent<UnityTransport>().SetRelayServerData(new RelayServerData(a, "wss"));
+        NetworkManager.Singleton.GetComponent<UnityTransport>().UseWebSockets = true;
 
         if (a == null)
         {
             _joinCodeText.text = "Code Not Valid";
+            Debug.LogError("Code not Valid");
             return;
         }
 
