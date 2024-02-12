@@ -25,17 +25,23 @@ using ParrelSync;
 public class LobbyEntry
 {
     public string Name;
+    public string Id;
     public int SpotsAvailable;
+    public string LobbyType;
+    public List<Player> Players;
 
-    public LobbyEntry(string name, int numSpots)
+    public LobbyEntry(string name, string id, string type, int numSpots, List<Player> players)
     {
         Name = name;
+        Id = id;
+        LobbyType = type;
         SpotsAvailable = numSpots;
+        Players = players;
     }
 }
 
 
-public enum EncryptionType{DTLS, WSS}
+public enum EncryptionType { DTLS, WSS }
 
 public class LobbyManager : MonoBehaviour
 {
@@ -47,11 +53,13 @@ public class LobbyManager : MonoBehaviour
     [SerializeField] int maxLobbySize = 10;
 
     private const string RelayJoinCodeKey = "RelayJoinCode";
+    private const string LobbyTypeKey = "LobbyType";
     private string _playerId;
+    private string _playerName;
     public Lobby ConnectedLobby;
     private GameObject _currentMapInstance;
-    private string _encrptionType => (encryption == EncryptionType.DTLS) ? "dtls": "wss";
-    
+    private string _encrptionType => (encryption == EncryptionType.DTLS) ? "dtls" : "wss";
+
 
 
 
@@ -65,16 +73,40 @@ public class LobbyManager : MonoBehaviour
         // Remove this if you don't have ParrelSync installed. 
         // It's used to differentiate the clients, otherwise lobby will count them as the same
         options.SetProfile(ClonesManager.IsClone() ? ClonesManager.GetArgument() : "Primary");
-        Debug.Log("Profile: ");
         Debug.Log(ClonesManager.IsClone() ? ClonesManager.GetArgument() : "Primary");
 
 #endif
 
         await UnityServices.InitializeAsync(options);
 
-        if (!AuthenticationService.Instance.IsSignedIn) await AuthenticationService.Instance.SignInAnonymouslyAsync();
-        _playerId = AuthenticationService.Instance.PlayerId;
+        if (!AuthenticationService.Instance.IsSignedIn)
+        {
+            await AuthenticationService.Instance.SignInAnonymouslyAsync();
+            _playerId = AuthenticationService.Instance.PlayerId;
+
+            _playerName = await AuthenticationService.Instance.GetPlayerNameAsync();
+            _UIManager.DisplaySignedIn();
+            Debug.Log("Signed in as: " + _playerName);
+        }
+
+
     }
+
+    // returns name of currently signed in player
+    public async Task<string> GetPlayerName()
+    {
+        try
+        {
+            await Authenticate();
+            return _playerName;
+        }
+        catch (AuthenticationException e)
+        {
+            Debug.LogWarning("Error Authenticating when getting player Name" + e.Message);
+            return null;
+        }
+    }
+
 
     // Query Lobbies --------------------------------------------------------------------------------------------------------------
 
@@ -109,10 +141,24 @@ public class LobbyManager : MonoBehaviour
             Debug.Log($"lobby response: count: {lobbies.Results.Count}");
 
             List<LobbyEntry> _foundLobbies = new List<LobbyEntry>();
-            foreach (Lobby found in lobbies.Results) {
-                Debug.Log($"Found:\nName: {found.Name}\n  Code: {found.LobbyCode}\n  Available Slots: {found.AvailableSlots}\n Host:{found.HostId}");
-                _foundLobbies.Add(new LobbyEntry(found.Name, found.AvailableSlots));
-                foreach (Player p in found.Players) Debug.Log($"Player\n  ID: {p.Id}");
+            foreach (Lobby found in lobbies.Results)
+            {
+                Debug.Log($"Found:\nName: {found.Name}\n  ID: {found.Data[LobbyTypeKey].Value}\n  Available Slots: {found.AvailableSlots}\n Host ID:{found.HostId}");
+                _foundLobbies.Add(new LobbyEntry(found.Name, found.Id, found.Data[LobbyTypeKey].Value, found.AvailableSlots, found.Players));
+                foreach (Player p in found.Players)
+                {
+                    Debug.Log($"Player ID: {p.Id}");
+                    if (p.Data != null) {
+                        foreach (var data in p.Data)
+                        {
+                            Debug.Log($"Player data - {data.Key} : {data.Value} ");
+                        }
+                    }
+                }
+                foreach (var data in found.Data)
+                {
+                    Debug.Log($"Lobby data - {data.Key} : {data.Value} ");
+                }
             }
 
             return _foundLobbies;
@@ -132,11 +178,9 @@ public class LobbyManager : MonoBehaviour
     {
         try
         {
-            Debug.Log("Playing now... ");
-
             await Authenticate();
 
-            Debug.Log("Auth Successfull");
+            Debug.Log("Singed in as: " + await AuthenticationService.Instance.GetPlayerNameAsync());
 
             string defaultName = "QuickLobby " + (DateTime.Now).ToString("MMdd_HHmmss");
             ConnectedLobby = await TryQuick() ?? await CreateLobby(defaultName, maxLobbySize);
@@ -171,16 +215,18 @@ public class LobbyManager : MonoBehaviour
 
 
     // Join --------------------------------------------------------------------------------------------------------------
-    public async void Join(string joinCode)
+    public async void Join(string joinCode= null, string lobbyID = null)
     {
         try
         {
-            Debug.Log("Looking for lobby with code: " + joinCode);
-
             await Authenticate();
-            Debug.Log("Auth Successfull");
 
-            await JoinGame(joinCode);
+            if (joinCode != null)
+                await JoinGameWithcode(joinCode);
+            else if (lobbyID != null)
+                await JoinGameWithID(lobbyID);
+            else
+                throw new LobbyServiceException(new LobbyExceptionReason(), "Lobby Error: No join code or lobby id specified");
 
             if (ConnectedLobby == null) throw new LobbyServiceException(new LobbyExceptionReason(), "Lobby Error: No Lobby connected");
 
@@ -195,7 +241,7 @@ public class LobbyManager : MonoBehaviour
 
     }
     // join lobby using code and start game
-    private async Task JoinGame(string joinCode)
+    private async Task JoinGameWithcode(string joinCode)
     {
         try
         {
@@ -206,7 +252,7 @@ public class LobbyManager : MonoBehaviour
             // If we found one, grab the relay allocation details
 
             JoinAllocation allocation = await RelayService.Instance.JoinAllocationAsync(ConnectedLobby.Data[RelayJoinCodeKey].Value);
- 
+
             // configure unity tranport to use websockets for webGL support
             NetworkManager.Singleton.GetComponent<UnityTransport>().SetRelayServerData(new RelayServerData(allocation, _encrptionType));
             NetworkManager.Singleton.GetComponent<UnityTransport>().UseWebSockets = true;
@@ -218,14 +264,43 @@ public class LobbyManager : MonoBehaviour
             // Join the game room as a client
             NetworkManager.Singleton.StartClient();
 
-            
-
         }
         catch (LobbyServiceException e)
         {
             Debug.LogWarning($"Failed to join lobby: {e.Message}");
         }
     }
+
+    private async Task JoinGameWithID(string lobbyId)
+    {
+        try
+        {
+            ConnectedLobby = await LobbyService.Instance.JoinLobbyByIdAsync(lobbyId);
+
+            if (ConnectedLobby == null) throw new LobbyServiceException(new LobbyExceptionReason(), "No Lobby Found using ID: " + lobbyId);
+
+            // If we found one, grab the relay allocation details
+
+            JoinAllocation allocation = await RelayService.Instance.JoinAllocationAsync(ConnectedLobby.Data[RelayJoinCodeKey].Value);
+
+            // configure unity tranport to use websockets for webGL support
+            NetworkManager.Singleton.GetComponent<UnityTransport>().SetRelayServerData(new RelayServerData(allocation, _encrptionType));
+            NetworkManager.Singleton.GetComponent<UnityTransport>().UseWebSockets = true;
+
+            // Initialize Game
+            StartGame();
+
+            Debug.Log("Starting Client");
+            // Join the game room as a client
+            NetworkManager.Singleton.StartClient();
+        }
+        catch (LobbyServiceException e)
+        {
+            Debug.LogWarning($"Failed to join lobby: {e.Message}");
+        }
+    }
+
+
 
     // attempts quick joins a lobby and starts client
     // _connectedLobby is set to lobby, or null if it fails
@@ -258,18 +333,15 @@ public class LobbyManager : MonoBehaviour
     {
         try
         {
-            Debug.Log("Creating new Lobby");
             await Authenticate();
-            Debug.Log("Auth Successfull");
 
-            Lobby createdLobby = await CreateLobby(lobbyName, lobbySize);
+            await CreateLobby(lobbyName, lobbySize);
 
-            if (createdLobby == null) throw new LobbyServiceException(new LobbyExceptionReason(), "Lobby Error: No Lobby connected");
+            if (ConnectedLobby == null) throw new LobbyServiceException(new LobbyExceptionReason(), "Lobby Error: No Lobby connected");
 
             _UIManager.DeactivateUI();
 
-            Debug.Log("Created lobby code: " + createdLobby.LobbyCode);
-            _UIManager.DisplayCode(createdLobby.LobbyCode);
+            Debug.Log("Created lobby code: " + ConnectedLobby.LobbyCode);
         }
         catch (Exception e)
         {
@@ -279,6 +351,7 @@ public class LobbyManager : MonoBehaviour
     }
 
 
+    //Creates a public lobby and sets it to instanse variable ConnectedLobby
     async Task<Lobby> CreateLobby(string lobbyName, int maxPlayers)
     {
         try
@@ -292,13 +365,16 @@ public class LobbyManager : MonoBehaviour
             NetworkManager.Singleton.GetComponent<UnityTransport>().UseWebSockets = true;
 
             string relayJoinCode = await GetRelayJoinCode(allocation);
-            Debug.Log("Created Join Code: " + relayJoinCode);
+            string lobbyType = "Golf Lobby";
 
             // Lobby options for a public lobby
             var options = new CreateLobbyOptions
             {   // add join code as a public (anyone can grab this code)
                 IsPrivate = false,
-                Data = new Dictionary<string, DataObject> { { RelayJoinCodeKey, new DataObject(DataObject.VisibilityOptions.Public, relayJoinCode) } }
+                Data = new Dictionary<string, DataObject> {
+                    { RelayJoinCodeKey, new DataObject(DataObject.VisibilityOptions.Member, relayJoinCode) },
+                    { LobbyTypeKey, new DataObject(DataObject.VisibilityOptions.Public, lobbyType) }
+                }
             };
 
             string defaultName = "MyLobby " + (DateTime.Now).ToString("MMdd_HHmmss");
@@ -306,15 +382,13 @@ public class LobbyManager : MonoBehaviour
 
             ConnectedLobby = await LobbyService.Instance.CreateLobbyAsync(name, maxPlayers, options);
 
-            Debug.Log("Created public Lobby: " + ConnectedLobby.Created);
+            Debug.Log("Created public Lobby with lobbyCode " + ConnectedLobby.LobbyCode);
 
             // Send a heartbeat every 15 seconds to keep the room alive
             StartCoroutine(HeartbeatLobbyCoroutine(ConnectedLobby.Id, 15));
 
             // Pull updates from the lobby every second
             StartCoroutine(PullUpdatesCoroutine(ConnectedLobby.Id, 1));
-
-            Debug.Log("Started host");
 
             // Start the room. I'm doing this immediately, but maybe you want to wait for the lobby to fill up
             NetworkManager.Singleton.StartHost();
@@ -340,7 +414,7 @@ public class LobbyManager : MonoBehaviour
         {
             return await RelayService.Instance.CreateAllocationAsync(maxPlayers);
         }
-        catch(RelayServiceException e)
+        catch (RelayServiceException e)
         {
             Debug.LogError($"Error allocating relay: {e.Message}");
             return null;
@@ -406,21 +480,19 @@ public class LobbyManager : MonoBehaviour
     {
         Debug.Log("STARTING GAME");
 
-        //disable buttons:
         _UIManager.DeactivateUI();
-
+        _UIManager.DisplaySignedIn();
         _UIManager.DisplayCode(ConnectedLobby.LobbyCode);
         _UIManager.DisplayLobbyName(ConnectedLobby.Name);
+
         _currentMapInstance = Instantiate(_gameMap);
         SetCameraTransform(new Vector3(0f, 13.62f, 0), new Vector3(90f, 0, 0), Vector3.one);
-
-        Debug.Log("current map: " + _currentMapInstance);
     }
 
     private void EndGame()
     {
         _UIManager.DisableUIText();
-        if (_currentMapInstance != null ) Destroy(_currentMapInstance);
+        if (_currentMapInstance != null) Destroy(_currentMapInstance);
     }
 
     private void SetCameraTransform(Vector3 position, Vector3 rotationEulerAngles, Vector3 scale)
