@@ -75,8 +75,8 @@ crashlytics-build.properties
 .DS_Store
 
 # Ignore temporaries from GameCI
-/[Aa]rtifacts/
-/[Cc]odeCoverage/
+#/[Aa]rtifacts/
+#/[Cc]odeCoverage/
 
 # webGL
 webGL_Build/
