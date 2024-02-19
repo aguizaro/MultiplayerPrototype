@@ -1,6 +1,9 @@
 name: Build (Skipping Tests)
 
-on: push
+on:
+  push:
+    branches:
+      - main
 
 jobs:
   build:
@@ -34,9 +37,17 @@ jobs:
           unityVersion: 2023.2.5f1
           allowDirtyBuild: true
 
+      # Deploy
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./build/WebGL
+          publish_branch: webGL
+
       # Output
-      - name: Upload build
+      - name: Upload build to artifacts
         uses: actions/upload-artifact@v3
         with:
           name: Build
-          path: ./build
+          path: ./build/WebGL/WebGL
