@@ -11,7 +11,15 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          lfs: false
+          lfs: true
+
+      # Cache
+      - uses: actions/cache@v3
+        with:
+          path: ./Library
+          key: Library-${{ hashFiles('./Assets/**', './Packages/**', './ProjectSettings/**') }}
+          restore-keys: |
+            Library-
 
       # Build
       - name: Build project
@@ -23,6 +31,8 @@ jobs:
         with:
           targetPlatform: WebGL
           projectPath: ./
+          unityVersion: 2023.2.5f1
+          allowDirtyBuild: true
 
       # Output
       - name: Upload build
