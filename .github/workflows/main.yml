@@ -7,7 +7,7 @@ on:
 
 jobs:
   build:
-    name: Build my project ✨
+    name: Build project
     runs-on: ubuntu-latest
     steps:
       # Checkout
@@ -24,6 +24,16 @@ jobs:
           restore-keys: |
             Library-
 
+      # Test
+      - uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+        with:
+          projectPath: ./
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          unityVersion: 2023.2.5f1
+          testMode: playmode
+
       # Build
       - name: Build project
         uses: game-ci/unity-builder@v4
@@ -36,13 +46,14 @@ jobs:
           projectPath: ./
           unityVersion: 2023.2.5f1
           allowDirtyBuild: true
+          buildName: LatestBuild
 
       # Deploy
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./build/WebGL/WebGL
+          publish_dir: ./build/WebGL/LatestBuild
           publish_branch: webGL
 
       # Output
@@ -50,4 +61,4 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: Build
-          path: ./build/WebGL/WebGL
+          path: ./build/WebGL/LatestBuild
