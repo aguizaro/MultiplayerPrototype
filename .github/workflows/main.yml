@@ -1,39 +1,56 @@
-name: Unity Test
+name: TestBuild
 
 on:
   workflow_dispatch:
     inputs:
       run-tests:
-        description: "Run Unity tests"
+        description: "Run Unity tests and build the project"
         default: "true"
 
 jobs:
-  test:
-    name: Run Unity tests
+  build:
+    name: Build my project ✨
     runs-on: ubuntu-latest
     steps:
+      # Checkout
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
+        with:
+          lfs: true
 
-      # Define environment variables for Unity license
-      - name: Set up Unity license
-        run: echo "${{ secrets.UNITY_LICENSE }}" > Unity.alf
+      # Cache
+      - uses: actions/cache@v3
+        with:
+          path: ./Library
+          key: Library-${{ hashFiles('./Assets/**', './Packages/**', './ProjectSettings/**') }}
+          restore-keys: |
+            Library-
 
-      # Run Unity tests
-      - name: Run Unity tests
+      # Test
+      - name: Run tests
         uses: game-ci/unity-test-runner@v4
         env:
           UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
           UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
           UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
         with:
-          projectPath: ./
           githubToken: ${{ secrets.GITHUB_TOKEN }}
+          projectPath: ./
 
-      # Upload test results as artifacts
-      - name: Upload test results
-        if: always()
-        uses: actions/upload-artifact@v2
+      # Build
+      - name: Build project
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
         with:
-          name: TestResults
+          targetPlatform: WebGL
+          projectPath: ./
+
+      # Output
+      - name: Upload build
+        uses: actions/upload-artifact@v3
+        with:
+          name: Build
           path: ./Artifacts
