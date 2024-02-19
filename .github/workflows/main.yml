@@ -1,4 +1,4 @@
-name: Build (Skipping Tests)
+name: Build (With Tests)
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
 
 jobs:
   build:
-    name: Build project
+    name: Run tests and build
     runs-on: ubuntu-latest
     steps:
       # Checkout
