@@ -48,9 +48,9 @@ public class LobbyManager : MonoBehaviour
     [SerializeField] private GameObject _gameMap;
     [SerializeField] private Transform mainCameraTransform;
     [SerializeField] private UIManager _UIManager;
-
-    [SerializeField] EncryptionType encryption = EncryptionType.WSS;
     [SerializeField] int maxLobbySize = 10;
+
+    public static EncryptionType encryption = EncryptionType.WSS;
 
     private const string RelayJoinCodeKey = "RelayJoinCode";
     private const string LobbyTypeKey = "LobbyType";
@@ -58,9 +58,12 @@ public class LobbyManager : MonoBehaviour
     private string _playerName;
     public Lobby ConnectedLobby;
     private GameObject _currentMapInstance;
-    private string _encrptionType => (encryption == EncryptionType.DTLS) ? "dtls" : "wss";
+    private string _encrptionType;
 
-
+    private void Start()
+    {
+        _encrptionType = (encryption == EncryptionType.WSS) ? "wss" : "dtls";
+    }
 
 
 
@@ -148,7 +151,8 @@ public class LobbyManager : MonoBehaviour
                 foreach (Player p in found.Players)
                 {
                     Debug.Log($"Player ID: {p.Id}");
-                    if (p.Data != null) {
+                    if (p.Data != null)
+                    {
                         foreach (var data in p.Data)
                         {
                             Debug.Log($"Player data - {data.Key} : {data.Value} ");
@@ -215,7 +219,7 @@ public class LobbyManager : MonoBehaviour
 
 
     // Join --------------------------------------------------------------------------------------------------------------
-    public async void Join(string joinCode= null, string lobbyID = null)
+    public async void Join(string joinCode = null, string lobbyID = null)
     {
         try
         {
@@ -255,7 +259,7 @@ public class LobbyManager : MonoBehaviour
 
             // configure unity tranport to use websockets for webGL support
             NetworkManager.Singleton.GetComponent<UnityTransport>().SetRelayServerData(new RelayServerData(allocation, _encrptionType));
-            NetworkManager.Singleton.GetComponent<UnityTransport>().UseWebSockets = true;
+            if (_encrptionType == "wss") NetworkManager.Singleton.GetComponent<UnityTransport>().UseWebSockets = true;
 
             // Initialize Game
             StartGame();
@@ -285,7 +289,7 @@ public class LobbyManager : MonoBehaviour
 
             // configure unity tranport to use websockets for webGL support
             NetworkManager.Singleton.GetComponent<UnityTransport>().SetRelayServerData(new RelayServerData(allocation, _encrptionType));
-            NetworkManager.Singleton.GetComponent<UnityTransport>().UseWebSockets = true;
+            if (_encrptionType == "wss") NetworkManager.Singleton.GetComponent<UnityTransport>().UseWebSockets = true;
 
             // Initialize Game
             StartGame();
@@ -315,7 +319,7 @@ public class LobbyManager : MonoBehaviour
             JoinAllocation joinAllocation = await JoinRelay(relayJoinCode);
 
             NetworkManager.Singleton.GetComponent<UnityTransport>().SetRelayServerData(new RelayServerData(joinAllocation, _encrptionType));
-            NetworkManager.Singleton.GetComponent<UnityTransport>().UseWebSockets = true;
+            if (_encrptionType == "wss") NetworkManager.Singleton.GetComponent<UnityTransport>().UseWebSockets = true;
 
             NetworkManager.Singleton.StartClient();
 
