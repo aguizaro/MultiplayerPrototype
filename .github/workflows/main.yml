@@ -65,7 +65,7 @@ jobs:
           unityVersion: 2023.2.5f1
           allowDirtyBuild: true
           buildName: LatestBuild
-          buildMethod: BuildSettings.SetWSSEncryption
+          
       # Deploy
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
@@ -110,7 +110,7 @@ jobs:
           unityVersion: 2023.2.5f1
           allowDirtyBuild: true
           buildName: LatestBuild
-          buildMethod: BuildSettings.SetDTLSEncryption
+          
       # Output
       - name: Upload build to artifacts
         uses: actions/upload-artifact@v3
@@ -148,7 +148,7 @@ jobs:
           unityVersion: 2023.2.5f1
           allowDirtyBuild: true
           buildName: LatestBuild
-          buildMethod: BuildSettings.SetDTLSEncryption
+          
       # Output
       - name: Upload build to artifacts
         uses: actions/upload-artifact@v3
