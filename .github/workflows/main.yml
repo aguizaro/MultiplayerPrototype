@@ -34,7 +34,7 @@ jobs:
           githubToken: ${{ secrets.GITHUB_TOKEN }}
           unityVersion: 2023.2.5f1
           testMode: playmode
-          artifactsPath: ./test-results
+          artifactsPath: test-results
       #Output
       - name: Upload test results
         uses: actions/upload-artifact@v2
