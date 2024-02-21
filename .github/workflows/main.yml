@@ -1,4 +1,4 @@
-name: Test and Build Selected Platforms
+name: Test and Build Selected Platforms + Deploy webGL build
 
 on:
   push:
@@ -33,7 +33,6 @@ jobs:
           projectPath: ./
           githubToken: ${{ secrets.GITHUB_TOKEN }}
           unityVersion: 2023.2.5f1
-          testMode: playmode
       #Output
       - name: Upload test results
         uses: actions/upload-artifact@v2
@@ -43,7 +42,7 @@ jobs:
           path: ./test-results
 
   buildWebGL:
-    name: Build for WebGL + Deploy to GitHub Pages
+    name: Build for WebGL
     runs-on: ubuntu-latest
     needs: test
     steps:
