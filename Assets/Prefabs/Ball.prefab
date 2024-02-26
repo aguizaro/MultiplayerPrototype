@@ -13,7 +13,7 @@ GameObject:
   - component: {fileID: 8626659793736075944}
   - component: {fileID: 4265102973758998908}
   - component: {fileID: 1637836070680299151}
-  - component: {fileID: 1261263996895378637}
+  - component: {fileID: -5144475093396702826}
   m_Layer: 0
   m_Name: Ball
   m_TagString: Untagged
@@ -66,7 +66,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 405780a542e6742ffa32d0e0d0554d7b, type: 2}
+  - {fileID: 2100000, guid: 26b0b3970afc3405e8911ade76c7fe10, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -136,7 +136,7 @@ Rigidbody:
   m_Interpolate: 0
   m_Constraints: 0
   m_CollisionDetection: 0
---- !u!114 &1261263996895378637
+--- !u!114 &-5144475093396702826
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -148,3 +148,4 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 24d28975938544f1eb66ae3a432a376a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  lifeInSecs: 5

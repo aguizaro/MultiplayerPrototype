@@ -45,12 +45,12 @@ public enum EncryptionType { DTLS, WSS }
 
 public class LobbyManager : MonoBehaviour
 {
-    [SerializeField] private GameObject _gameMap;
+    //[SerializeField] private GameObject _gameMap;
     [SerializeField] private Transform mainCameraTransform;
     [SerializeField] private UIManager _UIManager;
-    [SerializeField] int maxLobbySize = 10;
 
-    public static EncryptionType encryption = EncryptionType.WSS;
+    [SerializeField] EncryptionType encryption = EncryptionType.WSS;
+    [SerializeField] int maxLobbySize = 10;
 
     private const string RelayJoinCodeKey = "RelayJoinCode";
     private const string LobbyTypeKey = "LobbyType";
@@ -58,12 +58,9 @@ public class LobbyManager : MonoBehaviour
     private string _playerName;
     public Lobby ConnectedLobby;
     private GameObject _currentMapInstance;
-    private string _encrptionType;
+    private string _encrptionType => (encryption == EncryptionType.DTLS) ? "dtls" : "wss";
 
-    private void Start()
-    {
-        _encrptionType = (encryption == EncryptionType.WSS) ? "wss" : "dtls";
-    }
+
 
 
 
@@ -76,7 +73,7 @@ public class LobbyManager : MonoBehaviour
         // Remove this if you don't have ParrelSync installed. 
         // It's used to differentiate the clients, otherwise lobby will count them as the same
         options.SetProfile(ClonesManager.IsClone() ? ClonesManager.GetArgument() : "Primary");
-        Debug.Log(ClonesManager.IsClone() ? ClonesManager.GetArgument() : "Primary");
+        Debug.Log(ClonesManager.IsClone() ? "user: " + ClonesManager.GetArgument() : "user: Primary");
 
 #endif
 
@@ -151,8 +148,7 @@ public class LobbyManager : MonoBehaviour
                 foreach (Player p in found.Players)
                 {
                     Debug.Log($"Player ID: {p.Id}");
-                    if (p.Data != null)
-                    {
+                    if (p.Data != null) {
                         foreach (var data in p.Data)
                         {
                             Debug.Log($"Player data - {data.Key} : {data.Value} ");
@@ -219,7 +215,7 @@ public class LobbyManager : MonoBehaviour
 
 
     // Join --------------------------------------------------------------------------------------------------------------
-    public async void Join(string joinCode = null, string lobbyID = null)
+    public async void Join(string joinCode= null, string lobbyID = null)
     {
         try
         {
@@ -235,6 +231,7 @@ public class LobbyManager : MonoBehaviour
             if (ConnectedLobby == null) throw new LobbyServiceException(new LobbyExceptionReason(), "Lobby Error: No Lobby connected");
 
             _UIManager.DeactivateUI();
+            
 
             Debug.Log("Connected lobby code: " + ConnectedLobby.LobbyCode);
         }
@@ -249,6 +246,7 @@ public class LobbyManager : MonoBehaviour
     {
         try
         {
+            Debug.Log("Joining WITH CODE");
             ConnectedLobby = await LobbyService.Instance.JoinLobbyByCodeAsync(joinCode);
 
             if (ConnectedLobby == null) throw new LobbyServiceException(new LobbyExceptionReason(), "No Lobby Found using code: " + joinCode);
@@ -259,14 +257,15 @@ public class LobbyManager : MonoBehaviour
 
             // configure unity tranport to use websockets for webGL support
             NetworkManager.Singleton.GetComponent<UnityTransport>().SetRelayServerData(new RelayServerData(allocation, _encrptionType));
-            if (_encrptionType == "wss") NetworkManager.Singleton.GetComponent<UnityTransport>().UseWebSockets = true;
-
-            // Initialize Game
-            StartGame();
+            NetworkManager.Singleton.GetComponent<UnityTransport>().UseWebSockets = true;
 
             Debug.Log("Starting Client");
             // Join the game room as a client
             NetworkManager.Singleton.StartClient();
+
+            // Initialize Game
+            Debug.Log("starting game");
+            StartGame();
 
         }
         catch (LobbyServiceException e)
@@ -279,24 +278,29 @@ public class LobbyManager : MonoBehaviour
     {
         try
         {
+            Debug.Log("Joining WITH ID");
             ConnectedLobby = await LobbyService.Instance.JoinLobbyByIdAsync(lobbyId);
 
             if (ConnectedLobby == null) throw new LobbyServiceException(new LobbyExceptionReason(), "No Lobby Found using ID: " + lobbyId);
 
             // If we found one, grab the relay allocation details
 
+            Debug.Log("Connected Lobby: " + ConnectedLobby.Name);
+
             JoinAllocation allocation = await RelayService.Instance.JoinAllocationAsync(ConnectedLobby.Data[RelayJoinCodeKey].Value);
+
+            Debug.Log("grabbed allocation from lobby: " + allocation.AllocationId);
 
             // configure unity tranport to use websockets for webGL support
             NetworkManager.Singleton.GetComponent<UnityTransport>().SetRelayServerData(new RelayServerData(allocation, _encrptionType));
-            if (_encrptionType == "wss") NetworkManager.Singleton.GetComponent<UnityTransport>().UseWebSockets = true;
-
-            // Initialize Game
-            StartGame();
+            NetworkManager.Singleton.GetComponent<UnityTransport>().UseWebSockets = true;
 
             Debug.Log("Starting Client");
             // Join the game room as a client
             NetworkManager.Singleton.StartClient();
+
+            // Initialize Game
+            StartGame();
         }
         catch (LobbyServiceException e)
         {
@@ -319,7 +323,7 @@ public class LobbyManager : MonoBehaviour
             JoinAllocation joinAllocation = await JoinRelay(relayJoinCode);
 
             NetworkManager.Singleton.GetComponent<UnityTransport>().SetRelayServerData(new RelayServerData(joinAllocation, _encrptionType));
-            if (_encrptionType == "wss") NetworkManager.Singleton.GetComponent<UnityTransport>().UseWebSockets = true;
+            NetworkManager.Singleton.GetComponent<UnityTransport>().UseWebSockets = true;
 
             NetworkManager.Singleton.StartClient();
 
@@ -361,12 +365,24 @@ public class LobbyManager : MonoBehaviour
         try
         {
 
+            Debug.Log("Started Create Lobby");
             // Create a relay allocation and generate a join code to share with the lobby
             Allocation allocation = await AllocateRelay(Math.Min(maxLobbySize, maxPlayers));
 
+            Debug.Log("Created Alloc: " + allocation.AllocationId);
+
+            bool t = NetworkManager.Singleton.enabled;
+
+            Debug.Log(t);
+
             // configure unity tranport to use websockets for webGL support
             NetworkManager.Singleton.GetComponent<UnityTransport>().SetRelayServerData(new RelayServerData(allocation, "wss"));
+
+            Debug.Log("Set RelayServer Data");
+
             NetworkManager.Singleton.GetComponent<UnityTransport>().UseWebSockets = true;
+
+            Debug.Log("Set WSS");
 
             string relayJoinCode = await GetRelayJoinCode(allocation);
             string lobbyType = "Golf Lobby";
@@ -489,21 +505,14 @@ public class LobbyManager : MonoBehaviour
         _UIManager.DisplayCode(ConnectedLobby.LobbyCode);
         _UIManager.DisplayLobbyName(ConnectedLobby.Name);
 
-        _currentMapInstance = Instantiate(_gameMap);
-        SetCameraTransform(new Vector3(0f, 13.62f, 0), new Vector3(90f, 0, 0), Vector3.one);
+        //_currentMapInstance = Instantiate(_gameMap);
+        
     }
 
     private void EndGame()
     {
         _UIManager.DisableUIText();
         if (_currentMapInstance != null) Destroy(_currentMapInstance);
-    }
-
-    private void SetCameraTransform(Vector3 position, Vector3 rotationEulerAngles, Vector3 scale)
-    {
-        mainCameraTransform.position = position;
-        mainCameraTransform.rotation = Quaternion.Euler(rotationEulerAngles);
-        mainCameraTransform.localScale = scale;
     }
 
     private void OnDestroy()
