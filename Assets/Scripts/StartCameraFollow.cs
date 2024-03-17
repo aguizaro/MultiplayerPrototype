@@ -10,23 +10,23 @@ public class StartCameraFollow : NetworkBehaviour
 
     public override void OnNetworkSpawn()
     {
-        transform.position = new Vector3(301.16153f, 77.8600006f, 279.106262f); //set starting position
-        Debug.Log("Set starting position: " + transform.position);
-        base.OnNetworkSpawn();
+        if (!IsOwner) isActive = false;
+
+        transform.position = new Vector3(0, 0.7f, Random.Range(1, 10)); //set starting position to random z val
+        Debug.Log("player: " + OwnerClientId + " Set starting position: " + transform.position);
+
     }
 
     private void LateUpdate()
     {
-        if (!isActive || !IsOwner) return;
-
-
+        if (!isActive) return;
         float angle = transform.eulerAngles.y;
         Quaternion camRotation = Quaternion.Euler(xCamRotation, angle, 0f);
 
         // chat GPT helped me figure out how to calculate my camera position and add interpolation
         Vector3 camPosition = transform.position - (camRotation * camOffset);
-        Camera.main.transform.position = Vector3.Lerp(Camera.main.transform.position, camPosition, followSpeed * Time.deltaTime);
-        Camera.main.transform.rotation = camRotation;
+        //Camera.main.transform.position = Vector3.Lerp(Camera.main.transform.position, camPosition, followSpeed * Time.deltaTime);
+        //Camera.main.transform.rotation = camRotation;
 
         //Debug.Log("Cam pos: " + Camera.main.transform.position + "rot: " + Camera.main.transform.rotation.eulerAngles);
         //Debug.Log("player pos: " + transform.position + "rot: " + transform.rotation.eulerAngles);

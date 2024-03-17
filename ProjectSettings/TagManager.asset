@@ -5,6 +5,10 @@ TagManager:
   serializedVersion: 2
   tags:
   - Terrain
+  - LobbyManager
+  - CinemachineTarget
+  - StateManager
+  - Cam
   layers:
   - Default
   - TransparentFX

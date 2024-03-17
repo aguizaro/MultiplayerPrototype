@@ -31,27 +31,22 @@ public class PlayerColor : NetworkBehaviour
     private void OnValueChanged(Color prev, Color next)
     {
         _renderer.material.color = next;
-        Debug.Log("On Value Change: " + _renderer.material.color);
     }
 
     public override void OnNetworkSpawn()
     {
-        Debug.Log("onNetSpawn, value of _netColot : " + _netColor.Value);
 
         // Take note, RPCs are queued up to run.
         // If we tried to immediately set our color locally after calling this RPC it wouldn't have propagated
         if (IsOwner)
         {
             _index = (int)OwnerClientId;
-            Debug.Log("Owner ID: " + _index);
             Color nextColor = GetNextColor();
 
-            Debug.Log("Calling CommitNetworkColorServerRpc with " + nextColor);
             CommitNetworkColorServerRpc(nextColor);
         }
         else
         {
-            Debug.Log("Non-Owner reading _netColor " + _netColor.Value);
             _renderer.material.color = _netColor.Value;
         }
 
@@ -62,7 +57,6 @@ public class PlayerColor : NetworkBehaviour
     private void CommitNetworkColorServerRpc(Color color)
     {
         _netColor.Value = color;
-        Debug.Log("Server set netColor to: " + _netColor.Value);
     }
 
    

@@ -19,7 +19,7 @@ using Unity.Networking.Transport.Relay;
 
 
 #if UNITY_EDITOR
-using ParrelSync;
+using Unity.Multiplayer.Playmode;
 #endif
 
 public class LobbyEntry
@@ -57,11 +57,7 @@ public class LobbyManager : MonoBehaviour
     private string _playerId;
     private string _playerName;
     public Lobby ConnectedLobby;
-    private GameObject _currentMapInstance;
     private string _encrptionType => (encryption == EncryptionType.DTLS) ? "dtls" : "wss";
-
-
-
 
 
     // Authentication --------------------------------------------------------------------------------------------------------------
@@ -70,11 +66,9 @@ public class LobbyManager : MonoBehaviour
         var options = new InitializationOptions();
 
 #if UNITY_EDITOR
-        // Remove this if you don't have ParrelSync installed. 
-        // It's used to differentiate the clients, otherwise lobby will count them as the same
-        options.SetProfile(ClonesManager.IsClone() ? ClonesManager.GetArgument() : "Primary");
-        Debug.Log(ClonesManager.IsClone() ? "user: " + ClonesManager.GetArgument() : "user: Primary");
-
+        var playerTag = CurrentPlayer.ReadOnlyTags().Count > 0;
+        options.SetProfile(playerTag ? "Secondary" : "Primary");
+        Debug.Log("Logged in as: " + (playerTag ? "Secondary" : "Primary"));
 #endif
 
         await UnityServices.InitializeAsync(options);
@@ -86,7 +80,7 @@ public class LobbyManager : MonoBehaviour
 
             _playerName = await AuthenticationService.Instance.GetPlayerNameAsync();
             _UIManager.DisplaySignedIn();
-            Debug.Log("Signed in as: " + _playerName);
+            Debug.Log("AUTH: " + _playerName + "WITH ID: " + _playerId);
         }
 
 
@@ -148,7 +142,8 @@ public class LobbyManager : MonoBehaviour
                 foreach (Player p in found.Players)
                 {
                     Debug.Log($"Player ID: {p.Id}");
-                    if (p.Data != null) {
+                    if (p.Data != null)
+                    {
                         foreach (var data in p.Data)
                         {
                             Debug.Log($"Player data - {data.Key} : {data.Value} ");
@@ -215,7 +210,7 @@ public class LobbyManager : MonoBehaviour
 
 
     // Join --------------------------------------------------------------------------------------------------------------
-    public async void Join(string joinCode= null, string lobbyID = null)
+    public async void Join(string joinCode = null, string lobbyID = null)
     {
         try
         {
@@ -231,7 +226,7 @@ public class LobbyManager : MonoBehaviour
             if (ConnectedLobby == null) throw new LobbyServiceException(new LobbyExceptionReason(), "Lobby Error: No Lobby connected");
 
             _UIManager.DeactivateUI();
-            
+
 
             Debug.Log("Connected lobby code: " + ConnectedLobby.LobbyCode);
         }
@@ -334,6 +329,48 @@ public class LobbyManager : MonoBehaviour
             ConnectedLobby = null;
         }
     }
+
+
+    // leave lobby --------------------------------------------------------------------------------------------------------------
+   /* public async Task LeaveLobby(ulong ClientID)
+    {
+        try
+        {
+            await Authenticate(); 
+            await RemoveFromLobbyServerRPC(ClientID);
+        }
+        catch (Exception e)
+        {
+            Debug.LogWarning("Error in LeaveLobby(): " + e.Message);
+        }
+        
+        
+    }
+
+    [ServerRpc]
+    private async Task RemoveFromLobbyServerRPC(ulong playerID)
+    {
+        try
+        {
+            await Authenticate();
+
+            if (ConnectedLobby == null) throw new LobbyServiceException(new LobbyExceptionReason(), "Lobby Error: No Lobby connected");
+
+            if (_playerId == ConnectedLobby.HostId) //only host can remove players
+            {
+                Debug.Log("player is host. Host ID: " + ConnectedLobby.HostId);
+                Debug.Log("Removing player from lobby: " + ConnectedLobby.Id);
+
+                NetworkManager.Singleton.DisconnectClient(playerID); //disconnect player from network
+                await LobbyService.Instance.RemovePlayerAsync(ConnectedLobby.Id, _playerId); //remove from lobby
+                ConnectedLobby = null;
+            }
+        }
+        catch (Exception e)
+        {
+            Debug.LogWarning($"Error leaving lobby: {e}");
+        }
+    }*/
 
 
     // Create --------------------------------------------------------------------------------------------------------------
@@ -505,14 +542,18 @@ public class LobbyManager : MonoBehaviour
         _UIManager.DisplayCode(ConnectedLobby.LobbyCode);
         _UIManager.DisplayLobbyName(ConnectedLobby.Name);
 
-        //_currentMapInstance = Instantiate(_gameMap);
-        
+
     }
 
-    private void EndGame()
+    public void EndGame()
     {
-        _UIManager.DisableUIText();
-        if (_currentMapInstance != null) Destroy(_currentMapInstance);
+        _UIManager.DisableUIText(); //deactivate HUD
+        _UIManager.ActivateUI(); // enable lobby menu
+
+        Cursor.lockState = CursorLockMode.None;
+        StopAllCoroutines(); //stop lobby coroutines
+
+        Debug.Log("Still need to move the camera back to its starting pos");
     }
 
     private void OnDestroy()

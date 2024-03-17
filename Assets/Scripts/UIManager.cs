@@ -39,13 +39,14 @@ public class UIManager : MonoBehaviour
     private void JoinLobby() => _lobbyManager.Join(joinCode: _inputField.text);
 
 
-    public void DeactivateUI() { _UItoDeactivate.SetActive(false); Debug.Log("Deactivated Lobby UI: " + _UItoDeactivate.activeSelf); }
+    public void DeactivateUI() { _UItoDeactivate.SetActive(false); } //deactivate menus
+    public void ActivateUI() { _UItoDeactivate.SetActive(true); } //activate menus
     public void DisplayCode(string code) => _joinCodeText.text = code;
     public void DisplayLobbyName(string name) => _lobbyNameText.text = name;
     public async void DisplaySignedIn() => _signedInText.text = await _lobbyManager.GetPlayerName();
 
     public string GetInputText() { return _inputField.text; }
-    public void DisableUIText()
+    public void DisableUIText() // disable text on the HUD
     {
         _joinCodeText.text = "";
         _lobbyNameText.text = "";
